@@ -3,11 +3,24 @@
 #include <stdio.h>
 
 static GLint win = 0;
+volatile int colormode = 0;
 
 static void draw_callback(void)
 {
-  glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+  printf("[%s] starting, colormode = %i\n", __func__, colormode);
   glClear(GL_COLOR_BUFFER_BIT);
+
+  if (colormode == 0)
+  {
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    colormode = 1;
+  }
+  else
+  {
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    colormode = 0;
+  }
+    
   glutSwapBuffers();
 }
 
@@ -29,6 +42,7 @@ int main(int argc, char** argv)
   };  
 
   glutDisplayFunc(draw_callback);
+  glutIdleFunc(glutPostRedisplay);
   glutMainLoop();
   return 0;
 }
