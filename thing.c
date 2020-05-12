@@ -4,7 +4,13 @@
 
 #include <stdio.h>
 
-int main()
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+  glViewport(0, 0, width, height);
+}  
+
+main()
 {
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -14,6 +20,8 @@ int main()
 
 
   GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+
+  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);  
 
 
   if (window == NULL)
@@ -30,9 +38,19 @@ int main()
 
   glViewport(0, 0, 800, 600);
 
+  
+  float vertices[] = {
+    -0.5f, -0.5f, 0.0f,
+    0.5f, -0.5f, 0.0f,
+    0.0f,  0.5f, 0.0f
+  };  
+
 
   while(!glfwWindowShouldClose(window))
   {
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
     glfwSwapBuffers(window);
     glfwPollEvents();    
   }
