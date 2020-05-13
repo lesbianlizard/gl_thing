@@ -19,15 +19,15 @@
 static GLint win = 0;
 volatile int colormode = 0;
 
-unsigned int
+GLuint
   VAO,
   VBO,
   vertexShader,
   fragmentShader,
   shaderProgram;
-float color_anim = 1;
-float color_step = 0.01;
-float color_dir = 1;
+GLfloat color_anim = 1;
+GLfloat color_step = 0.01;
+GLfloat color_dir = 1;
 
 static void draw_callback(void)
 {
@@ -50,29 +50,88 @@ static void draw_callback(void)
   glutSwapBuffers();
 }
 
+int
+shader_compile(char *shader_filename, unsigned int *vsh_ret, GLenum shaderType)
+{
+  int fd;
+  // FIXME: make dynamic
+  char compile_log[512];
+  GLchar *shader_source;
+  GLuint new_shader;
+  GLint success;
+
+  // Memory map shader source code into C string
+  if (mmap_file_cstr(shader_filename, &fd, &shader_source) < 0)
+  {
+    return -1;
+  }
+
+  // Compile vertex shader
+  new_shader = glCreateShader(shaderType);
+  glShaderSource(new_shader, 1, (const GLchar**) &shader_source, NULL);
+  glCompileShader(new_shader);
+
+  // Check if vertex shader is ok
+  glGetShaderiv(new_shader, GL_COMPILE_STATUS, &success);
+
+  if (!success)
+  {
+    glGetShaderInfoLog(new_shader, 512, NULL, compile_log);
+    printf(_("[%1$s] Compiling shader '%2$s' of type %3$i failed with status %4$i, log:\n%5$s"),
+      __func__,
+      shader_filename,
+      shaderType,
+      success,
+      compile_log);
+    return -1;
+  }
+
+    printf(_("[%1$s] Successfully compiled shader '%2$s' of type %3$i\n"),
+      __func__,
+      shader_filename,
+      shaderType);
+  close(fd);
+  *vsh_ret = new_shader;
+  return 0;
+}
+
+int
+shader_link(GLuint vsh, GLuint fsh, GLuint *prog_ret)
+{
+  GLuint prog;
+  GLint success;
+  // FIXME: make this dynamic
+  char compile_log[512];
+
+  // Link program
+  prog = glCreateProgram();
+  glAttachShader(prog, vsh);
+  glAttachShader(prog, fsh);
+  glLinkProgram(prog);
+
+  // Check if program link is ok 
+  glGetProgramiv(prog, GL_LINK_STATUS, &success);
+  if (!success)
+  {
+  glGetProgramInfoLog(prog, 512, NULL, compile_log);
+    printf("[%s] Program link failed with status %i, log:\n%s",
+      __func__,
+      success,
+      compile_log);
+    return 1;
+  }
+
+  // We don't need these anymore
+  glDeleteShader(vsh);
+  glDeleteShader(fsh);
+  printf("[%s] Program link succeeded\n",
+    __func__);
+  *prog_ret = prog;
+}
+
 
 int main(int argc, char **argv)
 {
-  int
-    vsh_file_fd,
-    fsh_file_fd,
-    success;
-  char
-    *vsh_file,
-    *fsh_file,
-    compile_log[512];
-
-  // Try to memory map shaders into c strings
-  if (mmap_file_cstr("vertex.vert", &vsh_file_fd, &vsh_file) < 0)
-  {
-    return 1;
-  }
-
-  if (mmap_file_cstr("fragment.frag", &fsh_file_fd, &fsh_file) < 0)
-  {
-    return 1;
-  }
-
   // FIXME: properly init window size with vars and stuff
   //glutInitWindowSize(800, 600);
   glutInit(&argc, argv);
@@ -85,66 +144,12 @@ int main(int argc, char **argv)
   printf("GL_VERSION  : %s\n", glGetString(GL_VERSION) );
   printf("GL_RENDERER : %s\n", glGetString(GL_RENDERER) );
 
-  
-  // Compile vertex shader
-  vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vsh_file, NULL);
-  glCompileShader(vertexShader);
-
-  // Check if vertex shader is ok
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-  if (!success)
-  {
-    glGetShaderInfoLog(vertexShader, 512, NULL, compile_log);
-    printf("[%s] vertex shader compile failed with status %i, log:\n%s",
-      __func__,
-      success,
-      compile_log);
-    return 1;
-  }
-
-
-  // Compile fragment shader
-  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fsh_file, NULL);
-  glCompileShader(fragmentShader);
-
-  // Check if fragment shader is ok
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-  if (!success)
-  {
-    glGetShaderInfoLog(fragmentShader, 512, NULL, compile_log);
-    printf("[%s] fragment shader compile failed with status %i, log:\n%s",
-      __func__,
-      success,
-      compile_log);
-    return 1;
-  }
-
-  close(vsh_file_fd);
-  close(fsh_file_fd);
-
+  // Compile shaders
+  shader_compile("vertex.vert", &vertexShader, GL_VERTEX_SHADER);
+  shader_compile("fragment.frag", &fragmentShader, GL_FRAGMENT_SHADER);
 
   // Link shader program
-  shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
-  // We don't need these anymore
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-
-  // Check if program link is ok 
-  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-  if (!success)
-  {
-  glGetProgramInfoLog(shaderProgram, 512, NULL, compile_log);
-    printf("[%s] program link failed with status %i, log:\n%s",
-      __func__,
-      success,
-      compile_log);
-    return 1;
-  }
+  shader_link(vertexShader, fragmentShader, &shaderProgram);
 
   float vertices[] = {
     -1.0f, -1.0f, 0.0f,
