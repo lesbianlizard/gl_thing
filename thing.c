@@ -37,8 +37,8 @@ GLuint
   fragmentShader,
   geometryShader,
   shaderProgram;
-GLfloat color_anim = 1;
-GLfloat color_step = 0.01;
+GLfloat color_anim = 0;
+GLfloat color_step = 0.001;
 GLfloat color_dir = 1;
 
 pthread_t threads[1];
@@ -59,7 +59,7 @@ static void draw_callback(void)
   }
 
   // Animate background color
-  if (!((color_anim + color_dir*color_step > 0) && (color_anim + color_dir*color_step < 1)))
+  if (!((color_anim + color_dir*color_step > 0) && (color_anim + color_dir*color_step < 0.2)))
   {
     color_dir *= -1;
     //printf("[%s] color_dir = %f\n", __func__, color_dir);
@@ -71,8 +71,8 @@ static void draw_callback(void)
   glClearColor(color_anim, 0.0f, 0.0f, 1.0f);
 
   glClear(GL_COLOR_BUFFER_BIT);
-  //glDrawArrays(GL_TRIANGLES, 0, 3);
-  glDrawElements(GL_POINTS, 6, GL_UNSIGNED_INT, 0);
+  glDrawArrays(GL_POINTS, 0, 3);
+  //glDrawElements(GL_POINTS, 6, GL_UNSIGNED_INT, 0);
     
   glutSwapBuffers();
 }
@@ -237,12 +237,12 @@ int main(int argc, char **argv)
   // Start shader recompile thread
   pthread_create(&threads[0], NULL, check_recompile_thread, &mutex);
 
-  // vertices for a square
+  // vertices for a geometry shader
   GLfloat vertices[] = {
-    -1.0f, -1.0f, -1.0f, // bottom left
-    1.0f, -1.0f, -1.0f,  // bottom right
-    0.8f,  0.8f, 1.0f,  // top right
-    -1.0f, 1.0f, -1.0f  // top left
+    -0.5f, -0.8f,  0.0f,
+     0.0f, -0.8f,  0.0f,
+     0.5f, -0.8f,  0.0f,
+    -1.0f, -0.8f,  0.0f
   };  
 
   GLuint indices[] = {
@@ -252,15 +252,15 @@ int main(int argc, char **argv)
 
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
-  glGenBuffers(1, &EBO);
+  //glGenBuffers(1, &EBO);
 
   glBindVertexArray(VAO);
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+  //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*) 0);
   glEnableVertexAttribArray(0);
