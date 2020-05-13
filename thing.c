@@ -14,6 +14,8 @@
   #define N_(String) (String)
 #endif
 
+#include "c_utils/cstr_utils.h"
+
 static GLint win = 0;
 volatile int colormode = 0;
 
@@ -48,27 +50,6 @@ static void draw_callback(void)
   glutSwapBuffers();
 }
 
-int mmap_file_cstr(char *name, int *fd_ret, char **cstr_ret)
-{
-  int fd = open(name, O_RDONLY);
-
-  if (fd > 0)
-  {
-    int len = lseek(fd, 0, SEEK_END);
-    *cstr_ret = mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0);
-    *fd_ret = fd;
-    return 0;
-  }
-  else
-  {
-    fprintf(stderr, _("[%1$s] error %2$i opening file '%3$s': %4$s\n"),
-      __func__,
-      errno,
-      name,
-      strerror(errno));
-    return -1;
-  }
-}
 
 int main(int argc, char **argv)
 {
