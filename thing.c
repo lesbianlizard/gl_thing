@@ -17,6 +17,13 @@
 static GLint win = 0;
 volatile int colormode = 0;
 
+unsigned int
+  VAO,
+  VBO,
+  vertexShader,
+  fragmentShader,
+  shaderProgram;
+
 static void draw_callback(void)
 {
   //printf("[%s] starting, colormode = %i\n", __func__, colormode);
@@ -31,8 +38,10 @@ static void draw_callback(void)
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     colormode = 0;
   }
-    
+
   glClear(GL_COLOR_BUFFER_BIT);
+  glDrawArrays(GL_TRIANGLES, 0, 3);
+    
   glutSwapBuffers();
 }
 
@@ -60,9 +69,16 @@ int mmap_file_cstr(char *name, int *fd_ret, char **cstr_ret)
 
 int main(int argc, char **argv)
 {
-  int vsh_file_fd, fsh_file_fd;
-  char *vsh_file, *fsh_file;
+  int
+    vsh_file_fd,
+    fsh_file_fd,
+    success;
+  char
+    *vsh_file,
+    *fsh_file,
+    compile_log[512];
 
+  // Try to memory map shaders into c strings
   if (mmap_file_cstr("vertex.vert", &vsh_file_fd, &vsh_file) < 0)
   {
     return 1;
@@ -73,16 +89,78 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  glutInitWindowSize(800, 600);
+  // FIXME: properly init window size with vars and stuff
+  //glutInitWindowSize(800, 600);
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
   win = glutCreateWindow("sort of a glxgears clone");
-  glViewport(0, 0, 800, 600);
+  //glViewport(0, 0, 800, 600);
   
   glewInit();
 
   printf("GL_VERSION  : %s\n", glGetString(GL_VERSION) );
   printf("GL_RENDERER : %s\n", glGetString(GL_RENDERER) );
+
+  
+  // Compile vertex shader
+  vertexShader = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vertexShader, 1, &vsh_file, NULL);
+  glCompileShader(vertexShader);
+
+  // Check if vertex shader is ok
+  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+  if (!success)
+  {
+    glGetShaderInfoLog(vertexShader, 512, NULL, compile_log);
+    printf("[%s] vertex shader compile failed with status %i, log:\n%s",
+      __func__,
+      success,
+      compile_log);
+    return 1;
+  }
+
+
+  // Compile fragment shader
+  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fragmentShader, 1, &fsh_file, NULL);
+  glCompileShader(fragmentShader);
+
+  // Check if fragment shader is ok
+  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+  if (!success)
+  {
+    glGetShaderInfoLog(fragmentShader, 512, NULL, compile_log);
+    printf("[%s] fragment shader compile failed with status %i, log:\n%s",
+      __func__,
+      success,
+      compile_log);
+    return 1;
+  }
+
+  close(vsh_file_fd);
+  close(fsh_file_fd);
+
+
+  // Link shader program
+  shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, vertexShader);
+  glAttachShader(shaderProgram, fragmentShader);
+  glLinkProgram(shaderProgram);
+  // We don't need these anymore
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+
+  // Check if program link is ok 
+  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+  if (!success)
+  {
+  glGetProgramInfoLog(shaderProgram, 512, NULL, compile_log);
+    printf("[%s] program link failed with status %i, log:\n%s",
+      __func__,
+      success,
+      compile_log);
+    return 1;
+  }
 
   float vertices[] = {
     -0.5f, -0.5f, 0.0f,
@@ -90,40 +168,22 @@ int main(int argc, char **argv)
     0.0f,  0.5f, 0.0f
   };  
 
-  unsigned int VBO;
+  glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
+
+  glBindVertexArray(VAO);
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  
-  unsigned int vertexShader;
-  vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vsh_file, NULL);
-  glCompileShader(vertexShader);
 
-  int vsh_compile_success;
-  char vsh_compile_log[512];
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &vsh_compile_success);
-  glGetShaderInfoLog(vertexShader, 512, NULL, vsh_compile_log);
-  printf("[%s] vertex shader compile status %i, log:\n%s", __func__, vsh_compile_success, vsh_compile_log);
+  glEnableVertexAttribArray(0);
 
-
-  unsigned int fragmentShader;
-  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fsh_file, NULL);
-  glCompileShader(fragmentShader);
-
-  int fsh_compile_success;
-  char fsh_compile_log[512];
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &fsh_compile_success);
-  glGetShaderInfoLog(fragmentShader, 512, NULL, fsh_compile_log);
-  printf("[%s] fragment shader compile status %i, log:\n%s", __func__, fsh_compile_success, fsh_compile_log);
-
-  close(vsh_file_fd);
-  close(fsh_file_fd);
-
+  glUseProgram(shaderProgram);
 
   glutDisplayFunc(draw_callback);
   glutIdleFunc(glutPostRedisplay);
   glutMainLoop();
+
   return 0;
 }
