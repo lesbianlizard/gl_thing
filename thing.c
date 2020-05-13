@@ -23,21 +23,24 @@ unsigned int
   vertexShader,
   fragmentShader,
   shaderProgram;
+float color_anim = 1;
+float color_step = 0.01;
+float color_dir = 1;
 
 static void draw_callback(void)
 {
   //printf("[%s] starting, colormode = %i\n", __func__, colormode);
 
-  if (colormode == 0)
+  if (!((color_anim + color_dir*color_step > 0) && (color_anim + color_dir*color_step < 1)))
   {
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-    colormode = 1;
+    color_dir *= -1;
+    //printf("[%s] color_dir = %f\n", __func__, color_dir);
   }
-  else
-  {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    colormode = 0;
-  }
+
+  color_anim += color_dir*color_step; 
+  //printf("[%s] color_anim = %f\n", __func__, color_anim);
+
+  glClearColor(color_anim, 0.0f, 0.0f, 1.0f);
 
   glClear(GL_COLOR_BUFFER_BIT);
   glDrawArrays(GL_TRIANGLES, 0, 3);
