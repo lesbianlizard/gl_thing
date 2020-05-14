@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include <sys/inotify.h>
 
+#include <jack/jack.h>
+
 // FIXME: another gl-extension-loading library to look into
 //#include <epoxy/gl.h>
 //#include <epoxy/glx.h>
@@ -21,6 +23,11 @@
 #endif
 
 #include "c_utils/cstr_utils.h"
+
+jack_port_t *jack_input_port;
+jack_port_t *jack_output_port;
+jack_client_t *jack_client;
+#include "jack_simple_client.h"
 
 static char* vsh_filename = "vertex.vert";
 static char* fsh_filename = "fragment.frag";
@@ -46,8 +53,9 @@ GLfloat color_dir = 1;
 GLenum error;
 GLsizei n_things_to_draw;
 
-pthread_t threads[1];
+pthread_t threads[2];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 // FIXME: function headers for everyone
 void recompile_shaders(void);
@@ -268,6 +276,8 @@ int main(int argc, char **argv)
 
   // Start shader recompile thread
   pthread_create(&threads[0], NULL, check_recompile_thread, &mutex);
+  // Start jack client
+  pthread_create(&threads[1], NULL, jack_main, &mutex);
 
   // A very simple 1D texture
   GLfloat offset_tex_data[] = {
