@@ -76,7 +76,8 @@ static void draw_callback(void)
 
   
   //glDrawArrays(GL_TRIANGLES, 0, 3);
-  glDrawArrays(GL_POINTS, 0, 3);
+  // FIXME: this number of vertices needs to be updated!
+  glDrawArrays(GL_POINTS, 0, 21);
   //glDrawElements(GL_POINTS, 6, GL_UNSIGNED_INT, 0);
     
   glutSwapBuffers();
@@ -260,7 +261,7 @@ int main(int argc, char **argv)
 
   // A very simple 1D texture
   GLfloat offset_tex_data[] = {
-    0.0, 1, 1, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
+    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
   };
 
   // A very simple 10x10 2D texture
@@ -347,6 +348,8 @@ int main(int argc, char **argv)
   glGenTextures(1, &offset_texture);
   glBindTexture(GL_TEXTURE_1D, offset_texture);
   glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, 10, 0, GL_RED, GL_FLOAT, offset_tex_data);
+  // Disallow graphing "out of bounds"
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   // This is important, the texture doesn't seem to work without it!
   glGenerateMipmap(GL_TEXTURE_1D);
   
