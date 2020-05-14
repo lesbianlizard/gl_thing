@@ -43,6 +43,8 @@ GLuint
 GLfloat color_anim = 0;
 GLfloat color_step = 0.001;
 GLfloat color_dir = 1;
+GLenum error;
+GLsizei n_things_to_draw;
 
 pthread_t threads[1];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -77,10 +79,18 @@ static void draw_callback(void)
   
   //glDrawArrays(GL_TRIANGLES, 0, 3);
   // FIXME: this number of vertices needs to be updated!
-  glDrawArrays(GL_POINTS, 0, 21);
+  glDrawArrays(GL_POINTS, 0, n_things_to_draw);
   //glDrawElements(GL_POINTS, 6, GL_UNSIGNED_INT, 0);
     
   glutSwapBuffers();
+
+  error = glGetError();
+  if (!(error == 0))
+  {
+  printf("[%1$s] While rendering, glGetError reports error %2$i.\n",
+    __func__,
+    error);
+  }
 }
 
 int
@@ -318,6 +328,8 @@ int main(int argc, char **argv)
      0.9,  -0.8,  0.0,
      1.0,  -0.8,  0.0,
   };
+
+  n_things_to_draw = 21;
 
 //  GLuint indices[] = {
 //    0, 1, 2,
