@@ -259,7 +259,7 @@ int main(int argc, char **argv)
 
   // A very simple 1D texture
   GLfloat offset_tex_data[] = {
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
+    0.0, 1, 1, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
   };
 
   // A very simple 10x10 2D texture
@@ -287,9 +287,9 @@ int main(int argc, char **argv)
 
   // Triangle vertices
   GLfloat vertices[] = {
-    -1.0f, -1.0f, 0.0f,    0.0,  0.0, // bottom left
-    1.0f, -1.0f, 0.0f,     1.0,  1.0, // bottom right
-    1.0f,  1.0f, 0.0f,     1.0,  1.0, // top right
+    -1.0f, -1.0f, 0.0f,    0.0, // bottom left
+    1.0f, -1.0f, 0.0f,     1.0, // bottom right
+    1.0f,  1.0f, 0.0f,     1.0, // top right
   };  
 
 //  GLuint indices[] = {
@@ -309,25 +309,26 @@ int main(int argc, char **argv)
   //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
   //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*) 0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*) 0);
   glEnableVertexAttribArray(0);
 
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*) (3 * sizeof(GLfloat)));
+  glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*) (3 * sizeof(GLfloat)));
   glEnableVertexAttribArray(1);
 
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
   // set up the texture thing
-//  glGenTextures(1, &offset_texture);
-//  glBindTexture(GL_TEXTURE_1D, offset_texture);
-//  glTexImage1D(GL_TEXTURE_1D, 0, GL_DEPTH_COMPONENT, 10, 0, GL_DEPTH_COMPONENT, GL_FLOAT, offset_tex_data);
-//  glGenerateMipmap(GL_TEXTURE_1D);
+  glGenTextures(1, &offset_texture);
+  glBindTexture(GL_TEXTURE_1D, offset_texture);
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, 10, 0, GL_RED, GL_FLOAT, offset_tex_data);
+  // This is important, the texture doesn't seem to work without it!
+  glGenerateMipmap(GL_TEXTURE_1D);
   
   // set up the texture thing
-  glGenTextures(1, &texture_2d);
-  glBindTexture(GL_TEXTURE_2D, offset_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 10, 10, 0, GL_RED, GL_FLOAT, tex_2d_data);
-  glGenerateMipmap(GL_TEXTURE_2D);
+//  glGenTextures(1, &texture_2d);
+//  glBindTexture(GL_TEXTURE_2D, offset_texture);
+//  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 10, 10, 0, GL_RED, GL_FLOAT, tex_2d_data);
+//  glGenerateMipmap(GL_TEXTURE_2D);
 
   printf("[%1$s] Before starting rendering, glGetError reports error %2$i.\n",
     __func__,

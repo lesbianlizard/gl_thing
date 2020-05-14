@@ -1,10 +1,10 @@
 #version 330 core
 out vec4 FragColor;
 
-in vec2 tex_coord_shared;
+in float tex_coord_shared;
 //in vec4 color;
 
-uniform sampler2D tex_in;
+uniform sampler1D tex_in;
 
 void main()
 {
