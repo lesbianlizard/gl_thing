@@ -10,7 +10,7 @@ uniform sampler1D offset_tex;
 void main()
 {
   vec4 center;
-  float square_size = 0.02;
+  float square_size = 0.001;
   int i, j;
   
   

@@ -274,6 +274,9 @@ int main(int argc, char **argv)
   printf("GL_VERSION  : %s\n", glGetString(GL_VERSION) );
   printf("GL_RENDERER : %s\n", glGetString(GL_RENDERER) );
 
+  // Compile shaders at least once
+  recompile_shaders();
+
   // Start shader recompile thread
   pthread_create(&threads[0], NULL, check_recompile_thread, &mutex);
   // Start jack client
@@ -284,62 +287,66 @@ int main(int argc, char **argv)
     0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
   };
 
-  // A very simple 10x10 2D texture
-  GLfloat tex_2d_data[] = {
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-  };
-
-  // vertices for a geometry shader
+//  // Even more vertices for a geometry shader
 //  GLfloat vertices[] = {
-//    -0.5f, -0.8f,  0.0f,
-//     0.0f, -0.8f,  0.0f,
-//     0.5f, -0.8f,  0.0f,
- //   -1.0f, -0.8f,  0.0f
-  //};  
+//    -1.0,  -0.8,  0.0,
+//    -0.9,  -0.8,  0.0,
+//    -0.8,  -0.8,  0.0,
+//    -0.7,  -0.8,  0.0,
+//    -0.6,  -0.8,  0.0,
+//    -0.5,  -0.8,  0.0,
+//    -0.4,  -0.8,  0.0,
+//    -0.3,  -0.8,  0.0,
+//    -0.2,  -0.8,  0.0,
+//    -0.1,  -0.8,  0.0,
+//    -0.0,  -0.8,  0.0,
+//     0.1,  -0.8,  0.0,
+//     0.2,  -0.8,  0.0,
+//     0.3,  -0.8,  0.0,
+//     0.4,  -0.8,  0.0,
+//     0.5,  -0.8,  0.0,
+//     0.6,  -0.8,  0.0,
+//     0.7,  -0.8,  0.0,
+//     0.8,  -0.8,  0.0,
+//     0.9,  -0.8,  0.0,
+//     1.0,  -0.8,  0.0,
+//  };
+  GLsizei n_verts;
+  GLfloat *vertices;
+  GLuint n_dims, i, j;
+  GLfloat temp;
 
+  n_dims = 3;
+  n_verts = 1920;
+  vertices = malloc(n_verts * n_dims * sizeof(GLfloat));
+  //memset(vertices, 0, n_verts * sizeof(GLFloat));
 
-  // Triangle vertices
-//  GLfloat vertices[] = {
-//    -1.0f, -1.0f, 0.0f,    0.0, // bottom left
-//    1.0f, -1.0f, 0.0f,     1.0, // bottom right
-//    1.0f,  1.0f, 0.0f,     1.0, // top right
-//  };  
+  for (i = 0; i < n_dims; i++)
+  {
+    for (j = 0 + i; j < n_dims*(n_verts - 1) + i + 1; j += n_dims)
+    {
+      // x-position
+      if (i == 0)
+      {
+        // FIXME: get the endpoints exactly right
+        temp = ((GLfloat) j) / n_dims / n_verts * 2 - 1;
+      }
+      // y-position
+      else if (i == 1)
+      {
+        temp = -0.5;
+      }
+      // z-position
+      else
+      {
+        temp = 0;
+      }
 
-  // Even more vertices for a geometry shader
-  GLfloat vertices[] = {
-    -1.0,  -0.8,  0.0,
-    -0.9,  -0.8,  0.0,
-    -0.8,  -0.8,  0.0,
-    -0.7,  -0.8,  0.0,
-    -0.6,  -0.8,  0.0,
-    -0.5,  -0.8,  0.0,
-    -0.4,  -0.8,  0.0,
-    -0.3,  -0.8,  0.0,
-    -0.2,  -0.8,  0.0,
-    -0.1,  -0.8,  0.0,
-    -0.0,  -0.8,  0.0,
-     0.1,  -0.8,  0.0,
-     0.2,  -0.8,  0.0,
-     0.3,  -0.8,  0.0,
-     0.4,  -0.8,  0.0,
-     0.5,  -0.8,  0.0,
-     0.6,  -0.8,  0.0,
-     0.7,  -0.8,  0.0,
-     0.8,  -0.8,  0.0,
-     0.9,  -0.8,  0.0,
-     1.0,  -0.8,  0.0,
-  };
+      vertices[j] = temp;
+    }
+  }
 
-  n_things_to_draw = 21;
+  n_things_to_draw = n_verts;
 
 //  GLuint indices[] = {
 //    0, 1, 2,
@@ -353,7 +360,7 @@ int main(int argc, char **argv)
   //glBindVertexArray(VAO);
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, n_dims * n_verts * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
 
   //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
   //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -372,6 +379,7 @@ int main(int argc, char **argv)
   glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, 10, 0, GL_RED, GL_FLOAT, offset_tex_data);
   // Disallow graphing "out of bounds"
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   // This is important, the texture doesn't seem to work without it!
   glGenerateMipmap(GL_TEXTURE_1D);
   
