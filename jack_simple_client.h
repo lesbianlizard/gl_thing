@@ -82,8 +82,9 @@ jack_main (void* mutex)
 	/* display the current sample rate. 
 	 */
 
+  jack_sample_rate = jack_get_sample_rate(jack_client);
 	printf ("engine sample rate: %" PRIu32 "\n",
-		jack_get_sample_rate (jack_client));
+		jack_sample_rate);
 
 	/* create two ports */
 

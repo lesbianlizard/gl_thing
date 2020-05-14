@@ -8,7 +8,7 @@ out vec4 FragColor;
 
 void main()
 {
-  FragColor = vec4(0.0f, 0.75f, 1.0f, 1.0f);
+  FragColor = vec4(0.0f, 0.65f, 1.0f, 1.0f);
   //FragColor = color;
   //FragColor = texture(tex_in, tex_coord_shared).rrra;
   //FragColor = texture(tex_in, vec2(0.0, 0.0)).rgba;

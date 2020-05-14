@@ -24,9 +24,13 @@
 
 #include "c_utils/cstr_utils.h"
 
+typedef jack_default_audio_sample_t jack_sample_t;
+
 jack_port_t *jack_input_port;
 jack_port_t *jack_output_port;
 jack_client_t *jack_client;
+jack_nframes_t jack_sample_rate;
+
 #include "jack_simple_client.h"
 
 static char* vsh_filename = "vertex.vert";
@@ -52,6 +56,13 @@ GLfloat color_step = 0.001;
 GLfloat color_dir = 1;
 GLenum error;
 GLsizei n_things_to_draw;
+
+// This is the shared buffer between the geometry shader and jack
+GLsizei offset_tex_len = 1920;
+GLfloat *offset_tex_data;
+GLuint graph_period = 10; // seconds
+
+jack_sample_t *jack_raw_buffer;
 
 pthread_t threads[2];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -86,7 +97,6 @@ static void draw_callback(void)
 
   
   //glDrawArrays(GL_TRIANGLES, 0, 3);
-  // FIXME: this number of vertices needs to be updated!
   glDrawArrays(GL_POINTS, 0, n_things_to_draw);
   //glDrawElements(GL_POINTS, 6, GL_UNSIGNED_INT, 0);
     
@@ -223,7 +233,6 @@ check_recompile_thread(void *mutex)
   
   while (1)
   {
-    should_recompile = 1;
     inotify_fd = inotify_init();
 
     // make sure we get a valid watch on both files before continuing
@@ -248,6 +257,7 @@ check_recompile_thread(void *mutex)
 
     // FIXME: do re really have to close and reinit the inotify every time?
     close(inotify_fd);
+    should_recompile = 1;
   }
 }
 
@@ -279,42 +289,25 @@ int main(int argc, char **argv)
 
   // Start shader recompile thread
   pthread_create(&threads[0], NULL, check_recompile_thread, &mutex);
-  // Start jack client
-  pthread_create(&threads[1], NULL, jack_main, &mutex);
 
   // A very simple 1D texture
-  GLfloat offset_tex_data[] = {
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
-  };
-
-//  // Even more vertices for a geometry shader
-//  GLfloat vertices[] = {
-//    -1.0,  -0.8,  0.0,
-//    -0.9,  -0.8,  0.0,
-//    -0.8,  -0.8,  0.0,
-//    -0.7,  -0.8,  0.0,
-//    -0.6,  -0.8,  0.0,
-//    -0.5,  -0.8,  0.0,
-//    -0.4,  -0.8,  0.0,
-//    -0.3,  -0.8,  0.0,
-//    -0.2,  -0.8,  0.0,
-//    -0.1,  -0.8,  0.0,
-//    -0.0,  -0.8,  0.0,
-//     0.1,  -0.8,  0.0,
-//     0.2,  -0.8,  0.0,
-//     0.3,  -0.8,  0.0,
-//     0.4,  -0.8,  0.0,
-//     0.5,  -0.8,  0.0,
-//     0.6,  -0.8,  0.0,
-//     0.7,  -0.8,  0.0,
-//     0.8,  -0.8,  0.0,
-//     0.9,  -0.8,  0.0,
-//     1.0,  -0.8,  0.0,
+//  GLfloat offset_tex_data[] = {
+//    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
 //  };
+
   GLsizei n_verts;
   GLfloat *vertices;
   GLuint n_dims, i, j;
   GLfloat temp;
+  
+  offset_tex_data = malloc(offset_tex_len * sizeof(GLfloat));
+
+  for (j = 0; j < offset_tex_len; j++)
+  {
+    // FIXME: get the endpoints exactly right
+    temp = ((GLfloat) j) / offset_tex_len;
+    offset_tex_data[j] = temp;
+  }
 
   n_dims = 3;
   n_verts = 1920;
@@ -353,6 +346,14 @@ int main(int argc, char **argv)
 //    0, 3, 2,
 //  };
 
+  // Lock mutex to ensure jack doesn't write to jack_raw_buffer before we init it below
+  pthread_mutex_lock(&mutex);
+  // Start jack client after offset texture buffer has been allocated
+  pthread_create(&threads[1], NULL, jack_main, &mutex);
+
+  jack_raw_buffer = malloc(jack_sample_rate * graph_period * sizeof(jack_sample_t));
+  pthread_mutex_unlock(&mutex);
+
   //glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
   //glGenBuffers(1, &EBO);
@@ -376,7 +377,7 @@ int main(int argc, char **argv)
   // set up the texture thing
   glGenTextures(1, &offset_texture);
   glBindTexture(GL_TEXTURE_1D, offset_texture);
-  glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, 10, 0, GL_RED, GL_FLOAT, offset_tex_data);
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, offset_tex_len, 0, GL_RED, GL_FLOAT, offset_tex_data);
   // Disallow graphing "out of bounds"
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -397,5 +398,8 @@ int main(int argc, char **argv)
   glutIdleFunc(glutPostRedisplay);
   glutMainLoop();
 
+  // FIXME: an interrupt handler that actually ever runs these
+  free(offset_tex_data);
+  free(vertices);
   return 0;
 }
