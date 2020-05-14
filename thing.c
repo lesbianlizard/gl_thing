@@ -75,7 +75,8 @@ static void draw_callback(void)
   glClear(GL_COLOR_BUFFER_BIT);
 
   
-  glDrawArrays(GL_TRIANGLES, 0, 3);
+  //glDrawArrays(GL_TRIANGLES, 0, 3);
+  glDrawArrays(GL_POINTS, 0, 3);
   //glDrawElements(GL_POINTS, 6, GL_UNSIGNED_INT, 0);
     
   glutSwapBuffers();
@@ -138,7 +139,7 @@ shader_link(GLuint vsh, GLuint fsh, GLuint gsh, GLuint *prog_ret)
   prog = glCreateProgram();
   glAttachShader(prog, vsh);
   glAttachShader(prog, fsh);
-  //glAttachShader(prog, gsh);
+  glAttachShader(prog, gsh);
   glLinkProgram(prog);
 
   // Check if program link is ok 
@@ -281,27 +282,52 @@ int main(int argc, char **argv)
 //    -0.5f, -0.8f,  0.0f,
 //     0.0f, -0.8f,  0.0f,
 //     0.5f, -0.8f,  0.0f,
-//    -1.0f, -0.8f,  0.0f
-//  };  
+ //   -1.0f, -0.8f,  0.0f
+  //};  
 
 
   // Triangle vertices
+//  GLfloat vertices[] = {
+//    -1.0f, -1.0f, 0.0f,    0.0, // bottom left
+//    1.0f, -1.0f, 0.0f,     1.0, // bottom right
+//    1.0f,  1.0f, 0.0f,     1.0, // top right
+//  };  
+
+  // Even more vertices for a geometry shader
   GLfloat vertices[] = {
-    -1.0f, -1.0f, 0.0f,    0.0, // bottom left
-    1.0f, -1.0f, 0.0f,     1.0, // bottom right
-    1.0f,  1.0f, 0.0f,     1.0, // top right
-  };  
+    -1.0,  -0.8,  0.0,
+    -0.9,  -0.8,  0.0,
+    -0.8,  -0.8,  0.0,
+    -0.7,  -0.8,  0.0,
+    -0.6,  -0.8,  0.0,
+    -0.5,  -0.8,  0.0,
+    -0.4,  -0.8,  0.0,
+    -0.3,  -0.8,  0.0,
+    -0.2,  -0.8,  0.0,
+    -0.1,  -0.8,  0.0,
+    -0.0,  -0.8,  0.0,
+     0.1,  -0.8,  0.0,
+     0.2,  -0.8,  0.0,
+     0.3,  -0.8,  0.0,
+     0.4,  -0.8,  0.0,
+     0.5,  -0.8,  0.0,
+     0.6,  -0.8,  0.0,
+     0.7,  -0.8,  0.0,
+     0.8,  -0.8,  0.0,
+     0.9,  -0.8,  0.0,
+     1.0,  -0.8,  0.0,
+  };
 
 //  GLuint indices[] = {
 //    0, 1, 2,
 //    0, 3, 2,
 //  };
 
-  glGenVertexArrays(1, &VAO);
+  //glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
   //glGenBuffers(1, &EBO);
 
-  glBindVertexArray(VAO);
+  //glBindVertexArray(VAO);
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -309,11 +335,11 @@ int main(int argc, char **argv)
   //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
   //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*) 0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*) 0);
   glEnableVertexAttribArray(0);
 
-  glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*) (3 * sizeof(GLfloat)));
-  glEnableVertexAttribArray(1);
+  //glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*) (3 * sizeof(GLfloat)));
+  //glEnableVertexAttribArray(1);
 
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 

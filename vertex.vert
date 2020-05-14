@@ -1,13 +1,13 @@
 #version 330 core
 layout (location = 0) in vec3 pos;
-layout (location = 1) in float tex_coord;
+//layout (location = 1) in float tex_coord;
 
 //out vec4 color;
-out float tex_coord_shared;
+//out float tex_coord_shared;
 
 void main()
 {
   gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
   //color = (gl_Position.xyzw + 1)/2;
-  tex_coord_shared = tex_coord;
+  //tex_coord_shared = tex_coord;
 }
