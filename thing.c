@@ -75,6 +75,8 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #include "jack_simple_client.h"
 
+int i;
+
 // FIXME: function headers for everyone
 void recompile_shaders(void);
 
@@ -89,8 +91,16 @@ static void draw_callback(void)
     should_recompile = 0;
   }
 
+  for (i = 0; i < jack_sample_rate*graph_period; i++)
+  {
+    jack_raw_buffer[i] = color_anim;
+    //printf("[%s] I just put the value %e into jack_raw_buffer at index %li\n", __func__, jack_raw_buffer[i], i);
+  }
+
   // update offset texture
   jack_buffer_to_offset_tex(jack_raw_buffer, jack_raw_buf_bytes, offset_tex_data, offset_tex_len);
+
+  regen_offset_tex();
 
   // Animate background color
   if (!((color_anim + color_dir*color_step > 0) && (color_anim + color_dir*color_step < 0.2)))
@@ -131,16 +141,34 @@ jack_buffer_to_offset_tex(jack_sample_t *jack_buf, size_t jack_buf_bytes, GLfloa
     i,
     idx,
     jack_raw_buf_pos_local = jack_raw_buf_pos;
+  jack_sample_t
+    sample;
+  int
+    got_nonzero_sample = 0;
+
+  //check_that_we_actually_wrote_jack_data(jack_buf);
 
   ratio = jack_buf_bytes/(sizeof(GLfloat) * offset_tex_len);
-  printf(_("[%1$s] scaling with ratio %2$li\n"), __func__, ratio);
+  printf(_("[%1$s] scaling with ratio %2$li. jack_buf == %3$p, offset_tex == %4$p\n"), __func__, ratio, jack_buf, offset_tex);
 
   for (i = 0; i < offset_tex_len; i++)
   {
-    idx = (jack_raw_buf_pos_local*jack_buffer_size + ratio * i) % jack_buf_bytes;
-    printf(_("[%1$s] copying value %2$f at jack index %2$li (texture index %3$li) into offset texture.\n"), __func__, jack_buf[idx], idx, i);
+    // FIXME: offset this by the current position
+    //idx = i * ratio;
+    idx = i;
+    sample = jack_buf[idx];
+    offset_tex[i] = sample;
 
-    offset_tex[i] = jack_buf[idx];
+    if (!(sample == 0.0))
+    {
+      printf(_("[%s] copying non-zero value %e at jack index %li (texture index %li) into offset texture.\n"), __func__, sample, idx, i);
+      got_nonzero_sample = 1;
+    }
+  }
+
+  if (got_nonzero_sample == 0)
+  {
+    printf(_("[%1$s] everything we sampled in the jack buffer was zero.\n"), __func__);
   }
 }
 
@@ -294,6 +322,17 @@ check_recompile_thread(void *mutex)
   }
 }
 
+void
+regen_offset_tex(void)
+{
+  glBindTexture(GL_TEXTURE_1D, offset_texture);
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, offset_tex_len, 0, GL_RED, GL_FLOAT, offset_tex_data);
+  // Disallow graphing "out of bounds"
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // This is important, the texture doesn't seem to work without it!
+  glGenerateMipmap(GL_TEXTURE_1D);
+}
 
 
 
@@ -321,7 +360,7 @@ int main(int argc, char **argv)
   recompile_shaders();
 
   // Start shader recompile thread
-  pthread_create(&threads[0], NULL, check_recompile_thread, &mutex);
+  //pthread_create(&threads[0], NULL, check_recompile_thread, &mutex);
 
   // A very simple 1D texture
 //  GLfloat offset_tex_data[] = {
@@ -381,14 +420,23 @@ int main(int argc, char **argv)
 
   // Lock mutex to ensure jack doesn't write to jack_raw_buffer before we init it below
   // FIXME: but the thread needs to run first to generate the constants below, add more mutexes!
-  pthread_mutex_lock(&mutex);
+  //pthread_mutex_lock(&mutex);
   // Start jack client after offset texture buffer has been allocated
-  pthread_create(&threads[1], NULL, jack_main, &mutex);
+  //pthread_create(&threads[1], NULL, jack_main, &mutex);
 
   jack_raw_buf_bytes = round_up_integer(jack_sample_rate * graph_period * sizeof(jack_sample_t), jack_buffer_size);
   printf("[%s] allocating %li bytes (%li * jack_buffer_size) for jack_raw_buffer\n", __func__, jack_raw_buf_bytes, jack_raw_buf_bytes/jack_buffer_size);
   jack_raw_buffer = malloc(jack_raw_buf_bytes);
-  pthread_mutex_unlock(&mutex);
+  memset(jack_raw_buffer, 0, jack_raw_buf_bytes);
+  printf("[%s] allocated memory at %p\n", __func__, jack_raw_buffer);
+
+  // initialize the jack buffer with something non-zero for testing
+  for (i = 0; i < jack_sample_rate*graph_period; i++)
+  {
+    jack_raw_buffer[i] = 1.25;
+    //printf("[%s] I just put the value %e into jack_raw_buffer at index %li\n", __func__, jack_raw_buffer[i], i);
+  }
+  //pthread_mutex_unlock(&mutex);
 
   //glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
@@ -412,13 +460,7 @@ int main(int argc, char **argv)
 
   // set up the texture thing
   glGenTextures(1, &offset_texture);
-  glBindTexture(GL_TEXTURE_1D, offset_texture);
-  glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, offset_tex_len, 0, GL_RED, GL_FLOAT, offset_tex_data);
-  // Disallow graphing "out of bounds"
-  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  // This is important, the texture doesn't seem to work without it!
-  glGenerateMipmap(GL_TEXTURE_1D);
+  regen_offset_tex();
   
   // set up the texture thing
 //  glGenTextures(1, &texture_2d);

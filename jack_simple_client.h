@@ -31,13 +31,15 @@ callback_jack_process (jack_nframes_t nframes, void *arg)
     in,
 		sizeof (jack_default_audio_sample_t) * nframes);
 
-  printf("[%s] About to copy memory to jack_raw_buf_pos == %li\n", __func__, jack_raw_buf_pos);
+  printf("[%s] About to copy memory to jack_raw_buf_pos == %li into jack_raw_buf == %p\n", __func__, jack_raw_buf_pos, jack_raw_buffer);
   // Also copy audio to shared buffer for graphing
 	memcpy (
     jack_raw_buffer + jack_buffer_size*jack_raw_buf_pos,
     in,
 		sizeof (jack_default_audio_sample_t) * nframes);
   jack_raw_buf_pos++;
+
+  //check_that_we_actually_wrote_jack_data();
 
 
   if ((jack_raw_buf_pos + 1)*jack_buffer_size > jack_raw_buf_bytes)
@@ -46,6 +48,20 @@ callback_jack_process (jack_nframes_t nframes, void *arg)
   }
 
 	return 0;      
+}
+
+void
+check_that_we_actually_wrote_jack_data(jack_sample_t* ptr)
+{
+  jack_sample_t sample;
+  size_t idx, i;
+  
+  for (i = 0; i < jack_buffer_size; i++)
+  {
+    idx = jack_raw_buf_pos - 1 + i;
+    sample = ptr[idx];
+    printf("[%s] at index %li, jack_raw_buffer == %f\n", __func__, idx, sample);
+  }
 }
 
 /**
