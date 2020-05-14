@@ -22,8 +22,28 @@ callback_jack_process (jack_nframes_t nframes, void *arg)
 	
 	in = jack_port_get_buffer (jack_input_port, nframes);
 	out = jack_port_get_buffer (jack_output_port, nframes);
-	memcpy (out, in,
+
+  printf("[%s] copying raw data starting with %f\n", __func__, *in);
+  
+  // Copy audio to output port
+	memcpy (
+    out,
+    in,
 		sizeof (jack_default_audio_sample_t) * nframes);
+
+  printf("[%s] About to copy memory to jack_raw_buf_pos == %li\n", __func__, jack_raw_buf_pos);
+  // Also copy audio to shared buffer for graphing
+	memcpy (
+    jack_raw_buffer + jack_buffer_size*jack_raw_buf_pos,
+    in,
+		sizeof (jack_default_audio_sample_t) * nframes);
+  jack_raw_buf_pos++;
+
+
+  if ((jack_raw_buf_pos + 1)*jack_buffer_size > jack_raw_buf_bytes)
+  {
+    jack_raw_buf_pos = 0;
+  }
 
 	return 0;      
 }
@@ -82,9 +102,14 @@ jack_main (void* mutex)
 	/* display the current sample rate. 
 	 */
 
+  // FIXME: we have to make a callback to handle this or the buffer size changing
   jack_sample_rate = jack_get_sample_rate(jack_client);
 	printf ("engine sample rate: %" PRIu32 "\n",
 		jack_sample_rate);
+
+  jack_buffer_size = jack_get_buffer_size(jack_client);
+	printf ("engine buffer size: %" PRIu32 "\n",
+		jack_buffer_size);
 
 	/* create two ports */
 

@@ -23,15 +23,17 @@
 #endif
 
 #include "c_utils/cstr_utils.h"
+#include "utils.h"
 
 typedef jack_default_audio_sample_t jack_sample_t;
 
 jack_port_t *jack_input_port;
 jack_port_t *jack_output_port;
 jack_client_t *jack_client;
-jack_nframes_t jack_sample_rate;
+// FIXME: these shouldn't need to be initialized, but haaacks!
+jack_nframes_t jack_sample_rate = 48000;
+jack_nframes_t jack_buffer_size = 512;
 
-#include "jack_simple_client.h"
 
 static char* vsh_filename = "vertex.vert";
 static char* fsh_filename = "fragment.frag";
@@ -63,10 +65,15 @@ GLfloat *offset_tex_data;
 GLuint graph_period = 10; // seconds
 
 jack_sample_t *jack_raw_buffer;
+// The next position that should be written to in jack_raw_buffer, in multiples of jack_buffer_size
+size_t jack_raw_buf_pos = 0; 
+// FIXME: confusing name, how to distinguish between lengh as in elements and as in bytes?
+size_t jack_raw_buf_bytes;
 
 pthread_t threads[2];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+#include "jack_simple_client.h"
 
 // FIXME: function headers for everyone
 void recompile_shaders(void);
@@ -81,6 +88,9 @@ static void draw_callback(void)
     recompile_shaders();
     should_recompile = 0;
   }
+
+  // update offset texture
+  jack_buffer_to_offset_tex(jack_raw_buffer, jack_raw_buf_bytes, offset_tex_data, offset_tex_len);
 
   // Animate background color
   if (!((color_anim + color_dir*color_step > 0) && (color_anim + color_dir*color_step < 0.2)))
@@ -108,6 +118,29 @@ static void draw_callback(void)
   printf("[%1$s] While rendering, glGetError reports error %2$i.\n",
     __func__,
     error);
+  }
+}
+
+// Scale down the buffer of jack data to fit inside the screen-space offset texture
+void
+jack_buffer_to_offset_tex(jack_sample_t *jack_buf, size_t jack_buf_bytes, GLfloat *offset_tex, size_t offset_tex_len)
+{
+  // FIXME: come up with an algorithm which finds exactly the right indices, not using integer division...
+  size_t
+    ratio,
+    i,
+    idx,
+    jack_raw_buf_pos_local = jack_raw_buf_pos;
+
+  ratio = jack_buf_bytes/(sizeof(GLfloat) * offset_tex_len);
+  printf(_("[%1$s] scaling with ratio %2$li\n"), __func__, ratio);
+
+  for (i = 0; i < offset_tex_len; i++)
+  {
+    idx = (jack_raw_buf_pos_local*jack_buffer_size + ratio * i) % jack_buf_bytes;
+    printf(_("[%1$s] copying value %2$f at jack index %2$li (texture index %3$li) into offset texture.\n"), __func__, jack_buf[idx], idx, i);
+
+    offset_tex[i] = jack_buf[idx];
   }
 }
 
@@ -347,11 +380,14 @@ int main(int argc, char **argv)
 //  };
 
   // Lock mutex to ensure jack doesn't write to jack_raw_buffer before we init it below
+  // FIXME: but the thread needs to run first to generate the constants below, add more mutexes!
   pthread_mutex_lock(&mutex);
   // Start jack client after offset texture buffer has been allocated
   pthread_create(&threads[1], NULL, jack_main, &mutex);
 
-  jack_raw_buffer = malloc(jack_sample_rate * graph_period * sizeof(jack_sample_t));
+  jack_raw_buf_bytes = round_up_integer(jack_sample_rate * graph_period * sizeof(jack_sample_t), jack_buffer_size);
+  printf("[%s] allocating %li bytes (%li * jack_buffer_size) for jack_raw_buffer\n", __func__, jack_raw_buf_bytes, jack_raw_buf_bytes/jack_buffer_size);
+  jack_raw_buffer = malloc(jack_raw_buf_bytes);
   pthread_mutex_unlock(&mutex);
 
   //glGenVertexArrays(1, &VAO);
