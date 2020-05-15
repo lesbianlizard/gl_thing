@@ -157,10 +157,10 @@ jack_buffer_to_offset_tex(jack_sample_t *jack_buf, size_t jack_buf_bytes, GLfloa
   for (i = 0; i < offset_tex_len; i++)
   {
     // FIXME: offset this by the current position
-    //idx = i * ratio;
     idx = i;
-    //sample = (jack_buf[idx] + 0.005) * 100;
-    sample = (jack_buf[idx]) * 10;
+
+    // FIXME: this scaling is kind of ridiculous, fix it. See also put_cubes.geom
+    sample = (jack_buf[idx]) * 5 + 0.5;
     offset_tex[i] = sample;
 
     if (!(sample == 0.0))

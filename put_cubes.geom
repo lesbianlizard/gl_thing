@@ -15,7 +15,8 @@ void main()
   
   
   gl_Position = gl_in[0].gl_Position;
-  center = gl_Position + vec4(0.0, 0 + 1*texture(offset_tex, (gl_Position.x + 1)/2).r, 0.0, 0.0);
+  // FIXME: this scaling is kind of ridiculous, fix it. See also jack_buffer_to_offset_tex
+  center = gl_Position + vec4(0.0, 0.5 + 2*(texture(offset_tex, (gl_Position.x + 1)/2) - 0.25).r, 0.0, 0.0);
 
 
   gl_Position = center + vec4(square_size*-1.0, square_size*-1.0, 0.0, 0.0);
