@@ -67,6 +67,8 @@ GLuint graph_period = 1; // seconds
 
 jack_sample_t *jack_raw_buffer;
 // The next position that should be written to in jack_raw_buffer, in multiples of jack_buffer_size
+// FIXME: figure out why we can't set this to the maximum value
+size_t jack_raw_buf_actual_max_nframes = 100;
 size_t jack_raw_buf_pos = 0; 
 // FIXME: confusing name, how to distinguish between lengh as in elements and as in bytes?
 size_t jack_raw_buf_bytes;
@@ -138,7 +140,6 @@ jack_buffer_to_offset_tex(jack_sample_t *jack_buf, size_t jack_buf_bytes, GLfloa
 {
   // FIXME: come up with an algorithm which finds exactly the right indices, not using integer division...
   size_t
-    ratio,
     i,
     idx,
     jack_raw_buf_pos_local = jack_raw_buf_pos;
@@ -148,16 +149,18 @@ jack_buffer_to_offset_tex(jack_sample_t *jack_buf, size_t jack_buf_bytes, GLfloa
     min_sample = 0;
   int
     got_nonzero_sample = 0;
+  float
+    ratio;
 
   //check_that_we_actually_wrote_jack_data(jack_buf);
 
-  ratio = jack_buf_bytes/(sizeof(GLfloat) * offset_tex_len);
-  //printf(_("[%1$s] scaling with ratio %2$li. jack_buf == %3$p, offset_tex == %4$p\n"), __func__, ratio, jack_buf, offset_tex);
+  ratio = 1.0 * jack_raw_buf_actual_max_nframes * jack_buffer_size / offset_tex_len; 
+  printf(_("[%1$s] scaling with ratio %2$f. jack_buf == %3$p, offset_tex == %4$p\n"), __func__, ratio, jack_buf, offset_tex);
 
   for (i = 0; i < offset_tex_len; i++)
   {
     // FIXME: offset this by the current position
-    idx = i;
+    idx = i * ratio;
 
     // FIXME: this scaling is kind of ridiculous, fix it. See also put_cubes.geom
     sample = (jack_buf[idx]) * 5 + 0.5;

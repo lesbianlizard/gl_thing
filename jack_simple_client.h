@@ -42,9 +42,16 @@ callback_jack_process (jack_nframes_t nframes, void *arg)
   shared_buf_out = jack_raw_buffer;
 
   memcpy(
-    shared_buf_out,
+    shared_buf_out + jack_raw_buf_pos*jack_buffer_size,
     in,
     sizeof(jack_sample_t) * nframes);
+
+  jack_raw_buf_pos++;
+
+  if (jack_raw_buf_pos > jack_raw_buf_actual_max_nframes - 1)
+  {
+    jack_raw_buf_pos = 0;
+  }
     
 
 	return 0;      
