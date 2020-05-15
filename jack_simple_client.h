@@ -19,6 +19,7 @@ int
 callback_jack_process (jack_nframes_t nframes, void *arg)
 {
 	jack_default_audio_sample_t *in, *out;
+  jack_sample_t *shared_buf_out;
 	
 	in = jack_port_get_buffer (jack_input_port, nframes);
 	out = jack_port_get_buffer (jack_output_port, nframes);
@@ -32,20 +33,19 @@ callback_jack_process (jack_nframes_t nframes, void *arg)
 		sizeof (jack_default_audio_sample_t) * nframes);
 
   printf("[%s] About to copy memory to jack_raw_buf_pos == %li into jack_raw_buf == %p\n", __func__, jack_raw_buf_pos, jack_raw_buffer);
-  // Also copy audio to shared buffer for graphing
-	memcpy (
-    jack_raw_buffer + jack_buffer_size*jack_raw_buf_pos,
-    in,
-		sizeof (jack_default_audio_sample_t) * nframes);
-  jack_raw_buf_pos++;
 
-  //check_that_we_actually_wrote_jack_data();
-
-
-  if ((jack_raw_buf_pos + 1)*jack_buffer_size > jack_raw_buf_bytes)
+  if (jack_raw_buf_pos == 157)
   {
-    jack_raw_buf_pos = 0;
+    printf("hey gdb, it's about to crash!\n");
   }
+  
+  shared_buf_out = jack_raw_buffer;
+
+  memcpy(
+    shared_buf_out,
+    in,
+    sizeof(jack_sample_t) * nframes);
+    
 
 	return 0;      
 }
@@ -75,7 +75,7 @@ jack_shutdown (void *arg)
 }
 
 void*
-jack_main (void* mutex)
+jack_main (void* mymutex)
 {
 	const char **ports;
 	const char *client_name = "simple";
@@ -84,6 +84,7 @@ jack_main (void* mutex)
 	jack_status_t status;
 	
 	/* open a client connection to the JACK server */
+  //pthread_mutex_lock(&mymutex);
 
 	jack_client = jack_client_open (client_name, options, &status, server_name);
 	if (jack_client == NULL) {

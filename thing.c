@@ -62,7 +62,7 @@ GLsizei n_things_to_draw;
 // This is the shared buffer between the geometry shader and jack
 GLsizei offset_tex_len = 1920;
 GLfloat *offset_tex_data;
-GLuint graph_period = 10; // seconds
+GLuint graph_period = 1; // seconds
 
 jack_sample_t *jack_raw_buffer;
 // The next position that should be written to in jack_raw_buffer, in multiples of jack_buffer_size
@@ -71,7 +71,7 @@ size_t jack_raw_buf_pos = 0;
 size_t jack_raw_buf_bytes;
 
 pthread_t threads[2];
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_jack = PTHREAD_MUTEX_INITIALIZER;
 
 #include "jack_simple_client.h"
 
@@ -91,11 +91,11 @@ static void draw_callback(void)
     should_recompile = 0;
   }
 
-  for (i = 0; i < jack_sample_rate*graph_period; i++)
-  {
-    jack_raw_buffer[i] = color_anim;
-    //printf("[%s] I just put the value %e into jack_raw_buffer at index %li\n", __func__, jack_raw_buffer[i], i);
-  }
+//  for (i = 0; i < jack_sample_rate*graph_period; i++)
+//  {
+//    jack_raw_buffer[i] = color_anim;
+//    //printf("[%s] I just put the value %e into jack_raw_buffer at index %li\n", __func__, jack_raw_buffer[i], i);
+//  }
 
   // update offset texture
   jack_buffer_to_offset_tex(jack_raw_buffer, jack_raw_buf_bytes, offset_tex_data, offset_tex_len);
@@ -156,7 +156,7 @@ jack_buffer_to_offset_tex(jack_sample_t *jack_buf, size_t jack_buf_bytes, GLfloa
     // FIXME: offset this by the current position
     //idx = i * ratio;
     idx = i;
-    sample = jack_buf[idx];
+    sample = jack_buf[idx] * 10000;
     offset_tex[i] = sample;
 
     if (!(sample == 0.0))
@@ -420,9 +420,9 @@ int main(int argc, char **argv)
 
   // Lock mutex to ensure jack doesn't write to jack_raw_buffer before we init it below
   // FIXME: but the thread needs to run first to generate the constants below, add more mutexes!
-  //pthread_mutex_lock(&mutex);
+  pthread_mutex_lock(&mutex_jack);
   // Start jack client after offset texture buffer has been allocated
-  //pthread_create(&threads[1], NULL, jack_main, &mutex);
+  pthread_create(&threads[1], NULL, jack_main, &mutex_jack);
 
   jack_raw_buf_bytes = round_up_integer(jack_sample_rate * graph_period * sizeof(jack_sample_t), jack_buffer_size);
   printf("[%s] allocating %li bytes (%li * jack_buffer_size) for jack_raw_buffer\n", __func__, jack_raw_buf_bytes, jack_raw_buf_bytes/jack_buffer_size);
@@ -433,10 +433,10 @@ int main(int argc, char **argv)
   // initialize the jack buffer with something non-zero for testing
   for (i = 0; i < jack_sample_rate*graph_period; i++)
   {
-    jack_raw_buffer[i] = 1.25;
+    jack_raw_buffer[i] = 0;
     //printf("[%s] I just put the value %e into jack_raw_buffer at index %li\n", __func__, jack_raw_buffer[i], i);
   }
-  //pthread_mutex_unlock(&mutex);
+  pthread_mutex_unlock(&mutex_jack);
 
   //glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
