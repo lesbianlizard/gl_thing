@@ -68,7 +68,8 @@ GLuint graph_period = 1; // seconds
 jack_sample_t *jack_raw_buffer;
 // The next position that should be written to in jack_raw_buffer, in multiples of jack_buffer_size
 // FIXME: figure out why we can't set this to the maximum value
-size_t jack_raw_buf_actual_max_nframes = 100;
+//size_t jack_raw_buf_actual_max_nframes = 5;
+size_t jack_raw_buf_actual_max_nframes = 150;
 size_t jack_raw_buf_pos = 0; 
 // FIXME: confusing name, how to distinguish between lengh as in elements and as in bytes?
 size_t jack_raw_buf_bytes;
@@ -106,22 +107,24 @@ static void draw_callback(void)
   regen_offset_tex();
 
   // Animate background color
-  if (!((color_anim + color_dir*color_step > 0) && (color_anim + color_dir*color_step < 0.2)))
-  {
-    color_dir *= -1;
-    //printf("[%s] color_dir = %f\n", __func__, color_dir);
-  }
-
-  color_anim += color_dir*color_step; 
-  //printf("[%s] color_anim = %f\n", __func__, color_anim);
-
+//  if (!((color_anim + color_dir*color_step > 0) && (color_anim + color_dir*color_step < 0.2)))
+//  {
+//    color_dir *= -1;
+//    //printf("[%s] color_dir = %f\n", __func__, color_dir);
+//  }
+//
+//  color_anim += color_dir*color_step; 
+//  //printf("[%s] color_anim = %f\n", __func__, color_anim);
+//
   glClearColor(color_anim, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
-
-  
+//
+//  
   //glDrawArrays(GL_TRIANGLES, 0, 3);
-  glDrawArrays(GL_POINTS, 0, n_things_to_draw);
-  //glDrawElements(GL_POINTS, 6, GL_UNSIGNED_INT, 0);
+  glDrawArrays(GL_LINES, 0, n_things_to_draw);
+  //glDrawArrays(GL_TRIANGLES, 0, n_things_to_draw);
+  //glDrawArrays(GL_POINTS, 0, n_things_to_draw);
+//  //glDrawElements(GL_POINTS, 6, GL_UNSIGNED_INT, 0);
     
   glutSwapBuffers();
 
@@ -241,7 +244,7 @@ shader_link(GLuint vsh, GLuint fsh, GLuint gsh, GLuint *prog_ret)
   prog = glCreateProgram();
   glAttachShader(prog, vsh);
   glAttachShader(prog, fsh);
-  glAttachShader(prog, gsh);
+  //glAttachShader(prog, gsh);
   glLinkProgram(prog);
 
   // Check if program link is ok 
@@ -338,8 +341,8 @@ void
 regen_offset_tex(void)
 {
   glBindTexture(GL_TEXTURE_1D, offset_texture);
-  //glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, offset_tex_len, 0, GL_RED, GL_FLOAT, offset_tex_data);
-  glTexImage1D(GL_TEXTURE_1D, 0, GL_DEPTH_COMPONENT, offset_tex_len, 0, GL_DEPTH_COMPONENT, GL_FLOAT, offset_tex_data);
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, offset_tex_len, 0, GL_RED, GL_FLOAT, offset_tex_data);
+  //glTexImage1D(GL_TEXTURE_1D, 0, GL_DEPTH_COMPONENT, offset_tex_len, 0, GL_DEPTH_COMPONENT, GL_FLOAT, offset_tex_data);
   // Disallow graphing "out of bounds"
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -387,12 +390,13 @@ int main(int argc, char **argv)
   
   offset_tex_data = malloc(offset_tex_len * sizeof(OFFSET_TEX_TYPE));
 
-//  for (j = 0; j < offset_tex_len; j++)
-//  {
-//    // FIXME: get the endpoints exactly right
-//    temp = ((GLfloat) j) / offset_tex_len;
-//    offset_tex_data[j] = temp;
-//  }
+  for (j = 0; j < offset_tex_len; j++)
+  {
+    // FIXME: get the endpoints exactly right
+    temp = ((GLfloat) j) / offset_tex_len;
+    //temp = 0.2;
+    offset_tex_data[j] = temp;
+  }
 
   n_dims = 3;
   n_verts = 1920;
