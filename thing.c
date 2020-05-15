@@ -61,7 +61,7 @@ GLsizei n_things_to_draw;
 
 #define OFFSET_TEX_TYPE GLfloat
 // This is the shared buffer between the geometry shader and jack
-GLsizei offset_tex_len = 1920;
+GLsizei offset_tex_len = 1920/2;
 OFFSET_TEX_TYPE *offset_tex_data;
 GLuint graph_period = 1; // seconds
 
@@ -69,7 +69,7 @@ jack_sample_t *jack_raw_buffer;
 // The next position that should be written to in jack_raw_buffer, in multiples of jack_buffer_size
 // FIXME: figure out why we can't set this to the maximum value
 //size_t jack_raw_buf_actual_max_nframes = 5;
-size_t jack_raw_buf_actual_max_nframes = 150;
+size_t jack_raw_buf_actual_max_nframes = 4;
 size_t jack_raw_buf_pos = 0; 
 // FIXME: confusing name, how to distinguish between lengh as in elements and as in bytes?
 size_t jack_raw_buf_bytes;
@@ -344,7 +344,7 @@ regen_offset_tex(void)
   glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, offset_tex_len, 0, GL_RED, GL_FLOAT, offset_tex_data);
   //glTexImage1D(GL_TEXTURE_1D, 0, GL_DEPTH_COMPONENT, offset_tex_len, 0, GL_DEPTH_COMPONENT, GL_FLOAT, offset_tex_data);
   // Disallow graphing "out of bounds"
-  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   // This is important, the texture doesn't seem to work without it!
   glGenerateMipmap(GL_TEXTURE_1D);
