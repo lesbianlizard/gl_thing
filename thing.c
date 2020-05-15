@@ -59,9 +59,10 @@ GLfloat color_dir = 1;
 GLenum error;
 GLsizei n_things_to_draw;
 
+#define OFFSET_TEX_TYPE GLfloat
 // This is the shared buffer between the geometry shader and jack
 GLsizei offset_tex_len = 1920;
-GLfloat *offset_tex_data;
+OFFSET_TEX_TYPE *offset_tex_data;
 GLuint graph_period = 1; // seconds
 
 jack_sample_t *jack_raw_buffer;
@@ -142,29 +143,37 @@ jack_buffer_to_offset_tex(jack_sample_t *jack_buf, size_t jack_buf_bytes, GLfloa
     idx,
     jack_raw_buf_pos_local = jack_raw_buf_pos;
   jack_sample_t
-    sample;
+    sample,
+    max_sample = 0,
+    min_sample = 0;
   int
     got_nonzero_sample = 0;
 
   //check_that_we_actually_wrote_jack_data(jack_buf);
 
   ratio = jack_buf_bytes/(sizeof(GLfloat) * offset_tex_len);
-  printf(_("[%1$s] scaling with ratio %2$li. jack_buf == %3$p, offset_tex == %4$p\n"), __func__, ratio, jack_buf, offset_tex);
+  //printf(_("[%1$s] scaling with ratio %2$li. jack_buf == %3$p, offset_tex == %4$p\n"), __func__, ratio, jack_buf, offset_tex);
 
   for (i = 0; i < offset_tex_len; i++)
   {
     // FIXME: offset this by the current position
     //idx = i * ratio;
     idx = i;
-    sample = jack_buf[idx] * 10000;
+    //sample = (jack_buf[idx] + 0.005) * 100;
+    sample = (jack_buf[idx]) * 10;
     offset_tex[i] = sample;
 
     if (!(sample == 0.0))
     {
-      printf(_("[%s] copying non-zero value %e at jack index %li (texture index %li) into offset texture.\n"), __func__, sample, idx, i);
+      //printf(_("[%s] copying non-zero value %e at jack index %li (texture index %li) into offset texture.\n"), __func__, sample, idx, i);
       got_nonzero_sample = 1;
     }
+
+    if (sample > max_sample) {max_sample = sample;}
+    if (sample < min_sample) {min_sample = sample;}
   }
+
+  printf("[%s] the min,max value put into the texture is %f,%f\n", __func__, min_sample,max_sample);
 
   if (got_nonzero_sample == 0)
   {
@@ -326,7 +335,8 @@ void
 regen_offset_tex(void)
 {
   glBindTexture(GL_TEXTURE_1D, offset_texture);
-  glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, offset_tex_len, 0, GL_RED, GL_FLOAT, offset_tex_data);
+  //glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, offset_tex_len, 0, GL_RED, GL_FLOAT, offset_tex_data);
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_DEPTH_COMPONENT, offset_tex_len, 0, GL_DEPTH_COMPONENT, GL_FLOAT, offset_tex_data);
   // Disallow graphing "out of bounds"
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -360,7 +370,7 @@ int main(int argc, char **argv)
   recompile_shaders();
 
   // Start shader recompile thread
-  //pthread_create(&threads[0], NULL, check_recompile_thread, &mutex);
+  pthread_create(&threads[0], NULL, check_recompile_thread, NULL);
 
   // A very simple 1D texture
 //  GLfloat offset_tex_data[] = {
@@ -372,14 +382,14 @@ int main(int argc, char **argv)
   GLuint n_dims, i, j;
   GLfloat temp;
   
-  offset_tex_data = malloc(offset_tex_len * sizeof(GLfloat));
+  offset_tex_data = malloc(offset_tex_len * sizeof(OFFSET_TEX_TYPE));
 
-  for (j = 0; j < offset_tex_len; j++)
-  {
-    // FIXME: get the endpoints exactly right
-    temp = ((GLfloat) j) / offset_tex_len;
-    offset_tex_data[j] = temp;
-  }
+//  for (j = 0; j < offset_tex_len; j++)
+//  {
+//    // FIXME: get the endpoints exactly right
+//    temp = ((GLfloat) j) / offset_tex_len;
+//    offset_tex_data[j] = temp;
+//  }
 
   n_dims = 3;
   n_verts = 1920;
@@ -399,7 +409,7 @@ int main(int argc, char **argv)
       // y-position
       else if (i == 1)
       {
-        temp = -0.5;
+        temp = -1.0;
       }
       // z-position
       else

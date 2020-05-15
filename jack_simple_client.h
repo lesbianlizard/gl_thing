@@ -24,7 +24,7 @@ callback_jack_process (jack_nframes_t nframes, void *arg)
 	in = jack_port_get_buffer (jack_input_port, nframes);
 	out = jack_port_get_buffer (jack_output_port, nframes);
 
-  printf("[%s] copying raw data starting with %f\n", __func__, *in);
+  //printf("[%s] copying raw data starting with %f\n", __func__, *in);
   
   // Copy audio to output port
 	memcpy (
@@ -32,11 +32,11 @@ callback_jack_process (jack_nframes_t nframes, void *arg)
     in,
 		sizeof (jack_default_audio_sample_t) * nframes);
 
-  printf("[%s] About to copy memory to jack_raw_buf_pos == %li into jack_raw_buf == %p\n", __func__, jack_raw_buf_pos, jack_raw_buffer);
+  //printf("[%s] About to copy memory to jack_raw_buf_pos == %li into jack_raw_buf == %p\n", __func__, jack_raw_buf_pos, jack_raw_buffer);
 
   if (jack_raw_buf_pos == 157)
   {
-    printf("hey gdb, it's about to crash!\n");
+    //printf("hey gdb, it's about to crash!\n");
   }
   
   shared_buf_out = jack_raw_buffer;
